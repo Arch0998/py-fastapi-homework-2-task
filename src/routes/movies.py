@@ -100,7 +100,7 @@ async def get_movie_details(movie_id: int, db: AsyncSession = Depends(get_db)):
         overview=movie.overview,
         status=movie.status,
         budget=float(movie.budget),
-        revenue=movie.revenue,
+        revenue=float(movie.revenue),
         country=CountryOutSchema(id=movie.country.id, code=movie.country.code, name=movie.country.name),
         genres=[NamedEntitySchema(id=g.id, name=g.name) for g in movie.genres],
         actors=[NamedEntitySchema(id=a.id, name=a.name) for a in movie.actors],
@@ -121,7 +121,10 @@ def _validate_movie_payload_for_create(payload: MovieCreateSchema) -> None:
 
 
 def _validate_movie_payload_for_update(payload: MovieUpdateSchema) -> None:
+    today = datetime.date.today()
     if payload.name is not None and len(payload.name) > 255:
+        raise HTTPException(status_code=400, detail="Invalid input data.")
+    if payload.date is not None and payload.date > today + datetime.timedelta(days=365):
         raise HTTPException(status_code=400, detail="Invalid input data.")
     if payload.score is not None and not (0 <= payload.score <= 100):
         raise HTTPException(status_code=400, detail="Invalid input data.")
@@ -216,7 +219,7 @@ async def delete_movie(movie_id: int, db: AsyncSession = Depends(get_db)):
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie with the given ID was not found.")
 
-    await db.delete(movie)
+    db.delete(movie)
     await db.commit()
     return Response(status_code=204)
 
